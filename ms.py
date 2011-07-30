@@ -5,6 +5,7 @@ cgitb.enable()
 
 import cgi
 import os
+import ptree
 import simplejson as json
 
 #print json.dumps({'Hello': 'world!'})
@@ -12,36 +13,40 @@ import simplejson as json
 #    print '%20s: %s' % (param, os.environ[param])
 #print '\n' + os.environ['REQUEST_METHOD']
 
+# Generator to buffer file chunks
+# from http://webpython.codepoint.net/cgi_big_file_upload
+def fbuffer(f, chunk_size=10000):
+    while True:
+        chunk = f.read(chunk_size)
+        if not chunk: break
+        yield chunk
+          
 form = cgi.FieldStorage()
 
-if 'file' in form:
-    # Generator to buffer file chunks
-    # from http://webpython.codepoint.net/cgi_big_file_upload
-    def fbuffer(f, chunk_size=10000):
-       while True:
-          chunk = f.read(chunk_size)
-          if not chunk: break
-          yield chunk
-          
+if 'id' not in form or 'file' not in form:
+    content = '<form enctype="multipart/form-data" method="post"><input type="text" name="id"><input type="file" name="file"><input type="submit"></form>'
+else:
     # A nested FieldStorage instance holds the file
     fileitem = form['file']
+    identitem = form['id']
 
-    # Test if the file was uploaded
-    if fileitem.filename:
+    if identitem.value and fileitem.filename:
+        ppath = ptree.id2ptree(identitem.value)
+        try:
+            os.makedirs('../r%s' % ppath)
+        except OSError:
+            pass
+        # strip leading path from file name to avoid directory traversal attacks
+        name = os.path.basename(fileitem.filename)
+        f = open('../r%s%s' % (ppath, name), 'wb', 10000)
 
-       # strip leading path from file name to avoid directory traversal attacks
-       fn = os.path.basename(fileitem.filename)
-       f = open('files/' + fn, 'wb', 10000)
-
-       # Read the file in chunks
-       for chunk in fbuffer(fileitem.file):
-          f.write(chunk)
-       f.close()
-       content = '<p>The file "' + fn + '" was uploaded successfully</p>'
+        # Read the file in chunks
+        for chunk in fbuffer(fileitem.file):
+           f.write(chunk)
+        f.close()
+        content = '<p>The file "' + name + '" was uploaded successfully</p>'
     else:
-       content = '<p>No file was uploaded</p>'
-else:
-    content = '<form enctype="multipart/form-data" method="post"><input type="file" name="file"><input type="submit"></form>'
+        content = '<p>No file was uploaded</p>'
    
 print """\
 Content-Type: text/html\n
@@ -52,4 +57,4 @@ Content-Type: text/html\n
 %s
 </body>
 </html>
-""" % (content,)
+""" % content
