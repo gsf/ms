@@ -4,9 +4,11 @@ import cgitb
 cgitb.enable()
 
 import cgi
+from datetime import datetime
 import os
 import ptree
 import simplejson as json
+
 
 #print json.dumps({'Hello': 'world!'})
 #for param in os.environ.keys():
@@ -20,7 +22,14 @@ def fbuffer(f, chunk_size=10000):
         chunk = f.read(chunk_size)
         if not chunk: break
         yield chunk
-          
+
+def log(message):
+    try:
+        log_handle = open('../r/log', 'a')
+        log_handle.write(message + '\n')
+    finally:
+        log_handle.close()
+
 form = cgi.FieldStorage()
 
 if 'id' not in form or 'file' not in form:
@@ -32,8 +41,9 @@ else:
 
     if identitem.value and fileitem.filename:
         ppath = ptree.id2ptree(identitem.value)
+        home = '../r%s' % ppath
         try:
-            os.makedirs('../r%s' % ppath)
+            os.makedirs(home)
         except OSError:
             pass
         # strip leading path from file name to avoid directory traversal attacks
@@ -44,6 +54,7 @@ else:
         for chunk in fbuffer(fileitem.file):
            f.write(chunk)
         f.close()
+        log(datetime.now().isoformat() + ' POST ' + identitem.value + ' ' + name)
         content = '<p>The file "' + name + '" was uploaded successfully</p>'
     else:
         content = '<p>No file was uploaded</p>'
