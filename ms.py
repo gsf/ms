@@ -50,7 +50,21 @@ def get_response():
     #print 'Content-Type: text/html\n'
     #cgi.print_environ()
 
-    #if os.environ['REQUEST_METHOD'] == 'GET':
+    if os.environ['REQUEST_METHOD'] == 'GET':
+        identity = None
+        filename = 'meta.json'
+        if 'id' in form:
+            identity = form['id'].value
+        if 'f' in form:
+            filename = form['f'].value
+        if identity:
+            ppath = ptree.id2ptree(identity)
+            name = os.path.basename(filename)
+            url = 'http://data.free103point9.org/r%s%s' % (ppath, name)
+            return '''Content-Type: text/plain
+Location: %(url)s
+
+%(url)s''' % {'url': url}
             
     if os.environ['REQUEST_METHOD'] == 'POST':
         if 'id' in form and 'file' in form:
