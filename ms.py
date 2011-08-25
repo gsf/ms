@@ -41,7 +41,9 @@ Content-Type: text/html\n
 """ % content
 
 def get_response():
-    accept_formats = os.environ['HTTP_ACCEPT'].split(',')
+    accept_formats = os.environ.get('HTTP_ACCEPT', [])
+    if accept_formats:
+        accept_formats = accept_formats.split(',')
     form = cgi.FieldStorage()
     #print 'Content-Type: text/plain\n'
     #print form
