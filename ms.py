@@ -52,12 +52,12 @@ def get_response():
             
     if os.environ['REQUEST_METHOD'] == 'POST':
         if 'id' in form and 'file' in form:
-            identitem = form['id']
+            identity = form['id'].value
             # A nested FieldStorage instance holds the file
             fileitem = form['file']
 
-            if identitem.value and fileitem.filename:
-                ppath = ptree.id2ptree(identitem.value)
+            if identity and fileitem.filename:
+                ppath = ptree.id2ptree(identity)
                 home = '../r%s' % ppath
                 try:
                     os.makedirs(home)
@@ -71,12 +71,33 @@ def get_response():
                 for chunk in fbuffer(fileitem.file):
                    f.write(chunk)
                 f.close()
-                log(datetime.now().isoformat() + ' POST ' + identitem.value + ' ' + name)
+                log(datetime.now().isoformat() + ' POST ' + identity + ' ' + name)
+                message = "The file %s was uploaded successfully" % name
                 if 'text/html' in accept_formats:
-                    return html_response('<p>The file "' + name + '" was uploaded successfully</p>')
+                    return html_response('<p>%s</p>' % message)
+                else:
+                    return 'Content-Type: text/plain\n\n%s' % message
 
     if os.environ['REQUEST_METHOD'] == 'DELETE':
-        pass
+        if 'id' in form and 'filename' in form:
+            identity = form['id'].value
+            filename = form['filename'].value
+            if identity and filename:
+                ppath = ptree.id2ptree(identity)
+                dir = '../r%s' % ppath
+                name = os.path.basename(filename)
+                os.remove(dir + name)
+                try:
+                    os.removedirs(dir) # remove parent directories if empty
+                except OSError:
+                    pass
+                log(datetime.now().isoformat() + ' DELETE ' + identity + ' ' + name)
+                message = "The file %s was deleted successfully" % name
+                if 'text/html' in accept_formats:
+                    return html_response('<p></p>')
+                else:
+                    return 'Content-Type: text/plain\n\n%s' % message
+                
 
     if 'text/html' in accept_formats:
         return html_response("""
@@ -85,5 +106,7 @@ def get_response():
   <input type="file" name="file">
   <input type="submit">
 </form>""")
+    else:
+        return 'Content-Type: text/plain\n\ndata.free103point9.org'
    
 print get_response()
